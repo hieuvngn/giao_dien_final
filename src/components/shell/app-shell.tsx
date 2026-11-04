@@ -44,6 +44,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: '#/shadowing', char: '听', label: 'Shadowing', kind: 'route' },
       { href: '#/video', char: '影', label: 'AI Video Learning', kind: 'route' },
       { href: '#/create-file', char: '写', label: 'Tạo vở tập viết', kind: 'route' },
+      { href: '#/writing', char: '笔', label: 'Luyện viết chữ Hán', kind: 'route' },
       { href: '#/dictionary', char: '词', label: 'Tra cứu từ điển', kind: 'route' },
       { href: '#/radicals', char: '部', label: 'Bộ thủ', kind: 'route' },
     ],

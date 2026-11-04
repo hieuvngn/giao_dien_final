@@ -6,9 +6,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-quicksand);
-  --font-display: var(--font-baloo);
-  --font-cn: var(--font-kuai);
+  --font-sans: "Quicksand", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Baloo 2", "Quicksand", ui-sans-serif, system-ui, sans-serif;
+  --font-cn: "ZCOOL KuaiLe", "Kaiti SC", "KaiTi", "STKaiti", "Microsoft YaHei", serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

@@ -31,6 +31,7 @@ export default function Footer() {
           <a href="#/mistakes" className="hover:text-[#e8737f]">Sổ lỗi sai</a>
           <a href="#/twin" className="hover:text-[#e8737f]">Bản sao năng lực</a>
           <a href="#/create-file" className="hover:text-[#e8737f]">Tạo vở tập viết</a>
+          <a href="#/writing" className="hover:text-[#e8737f]">Luyện viết</a>
           <a href="#/login" className="hover:text-[#e8737f]">Đăng nhập</a>
           <a href="#/admin" className="hover:text-[#e8737f]">Quản trị</a>
         </nav>

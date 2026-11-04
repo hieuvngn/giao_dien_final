@@ -1,25 +1,10 @@
 import type { Metadata } from "next";
-import { Baloo_2, Quicksand, ZCOOL_KuaiLe } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
-const baloo = Baloo_2({
-  variable: "--font-baloo",
-  subsets: ["vietnamese", "latin"],
-  weight: ["500", "600", "700", "800"],
-});
-
-const quicksand = Quicksand({
-  variable: "--font-quicksand",
-  subsets: ["vietnamese", "latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const kuaiLe = ZCOOL_KuaiLe({
-  variable: "--font-kuai",
-  subsets: ["latin"],
-  weight: "400",
-});
+// Fonts are self-hosted in public/fonts (see scripts/fetch_fonts.py).
+// next/font/google was removed: Turbopack font cache broke the build
+// ("next/font/google queries have exactly one entry").
 
 export const metadata: Metadata = {
   title: "Nhật ký Hán ngữ – Lộ trình tiếng Trung: HSK 3.0 · YCT · Boya · Giáo trình Hán ngữ",
@@ -45,9 +30,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body
-        className={`${baloo.variable} ${quicksand.variable} ${kuaiLe.variable} font-sans antialiased bg-background text-foreground`}
-      >
+      <link
+        rel="stylesheet"
+        href="/fonts/fonts.css"
+        precedence="default"
+      />
+      <body className="font-sans antialiased bg-background text-foreground">
         {children}
         <Toaster />
       </body>
