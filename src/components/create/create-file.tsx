@@ -22,6 +22,7 @@ import {
   SHEET_HEAD,
   STROKE_RANGES,
   bgCssOf,
+  pageBgTone,
   type LayoutMode,
   type LineColor,
   type PaperType,
@@ -38,7 +39,7 @@ import {
    3️⃣ Xuất PDF (in / lưu bài tập / chia sẻ liên kết)
    ============================================================ */
 
-type CellItem = { ch: string; py: string; v?: 'model' | 'trace' | 'stroke' }
+type CellItem = { ch: string; py: string; v?: 'model' | 'trace' | 'stroke' | 'pinyin' }
 type InfoRow = { n: number; cn: string; py: string; vi: string }
 type StrokeBlock = { word: string; py: string; vi: string; rows: (CellItem | null)[][] }
 type BigBand = { ch: string; py: string; vi: string }
@@ -52,7 +53,7 @@ const viOf = (w: string, meta: CharMeta) => meta[w]?.vi || MEANING_MAP.get(w) ||
 
 /* ================= dựng trang — bố cục CHUẨN TỪNG CHỮ ================= */
 
-function buildSheets(words: string[], repeat: number, cols: number, rows: number, modelCell: boolean, meta: CharMeta): (CellItem | null)[][][] {
+function buildSheets(words: string[], repeat: number, cols: number, rows: number, modelCell: boolean, meta: CharMeta, showPinyin: boolean): (CellItem | null)[][][] {
   const pages: (CellItem | null)[][][] = []
   let page: (CellItem | null)[][] = []
   const pushRow = (row: (CellItem | null)[]) => {
@@ -69,6 +70,12 @@ function buildSheets(words: string[], repeat: number, cols: number, rows: number
     if (modelCell) {
       for (let k = 0; k < perRow; k++) {
         chars.forEach((ch) => sampleRow.push({ ch, py: meta[ch]?.py || charPinyin(ch) }))
+      }
+    } else if (showPinyin) {
+      /* tắt "hàng mẫu có chữ" → vẫn in hàng PHIÊN ÂM để người học tự viết chữ
+         (trước đây hàng này bị bỏ trống hoàn toàn → trang in không có chữ nào) */
+      for (let k = 0; k < perRow; k++) {
+        chars.forEach((ch) => sampleRow.push({ ch, py: meta[ch]?.py || charPinyin(ch), v: 'pinyin' }))
       }
     }
     while (sampleRow.length < cols) sampleRow.push(null)
@@ -222,28 +229,71 @@ function CellInner({
 }) {
   const py = meta[it.ch]?.py || it.py
   const han = isHan(it.ch)
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center">
-      {showPinyin && py && !trace && (
-        <span className="relative font-semibold leading-none text-[#e88aa6]" style={{ fontSize: '13cqw' }}>
+
+  /* Ô CHỈ CÓ PHIÊN ÂM (hàng mẫu khi tắt "hàng mẫu có chữ") — vẽ SVG để
+     kích thước không phụ thuộc đơn vị cqw (an toàn khi in mọi trình duyệt) */
+  if (it.v === 'pinyin') {
+    return (
+      <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <text x="50" y="70" textAnchor="middle" fontSize="24" fontWeight="600" fill="#e88aa6">
           {py}
-        </span>
-      )}
-      {trace ? (
-        <span className="font-cn relative leading-none text-[#4f3d4a]" style={{ fontSize: '48cqw', opacity: 0.16 }}>
+        </text>
+      </svg>
+    )
+  }
+
+  /* chữ mờ để tô theo */
+  if (trace) {
+    return (
+      <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <text x="50" y="74" textAnchor="middle" fontSize="48" fill="#4f3d4a" opacity="0.16" className="font-cn">
           {it.ch}
+        </text>
+      </svg>
+    )
+  }
+
+  /* chữ mẫu theo thứ tự nét: pinyin phía trên + StrokeChar bên dưới.
+     Cả hai nằm trong 1 ô vuông nội bộ (74% chiều rộng ô) để không bị
+     méo ở ô cao hơn rộng, và không dùng đơn vị cqw (an toàn khi in). */
+  if (showStroke && han) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center">
+        <span className="relative block w-[74%]" style={{ aspectRatio: '1' }}>
+          <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            {showPinyin && py && (
+              <text x="50" y="13" textAnchor="middle" fontSize="13" fontWeight="600" fill="#e88aa6">
+                {py}
+              </text>
+            )}
+          </svg>
+          <span className="absolute left-0 top-[22%] block h-[78%] w-full">
+            <StrokeChar ch={it.ch} />
+          </span>
         </span>
-      ) : showStroke && han ? (
-        /* chữ mẫu vẽ theo thứ tự nét (đỏ + số nét) */
-        <span className="relative grid place-items-center" style={{ width: '46cqw', aspectRatio: '1' }}>
-          <StrokeChar ch={it.ch} size={46} />
-        </span>
-      ) : (
-        <span className="font-cn relative leading-none text-[#4f3d4a]" style={{ fontSize: '48cqw' }}>
-          {it.ch}
-        </span>
+      </div>
+    )
+  }
+
+  /* chữ thường ± phiên âm */
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      {showPinyin && py && (
+        <text x="50" y="21" textAnchor="middle" fontSize="13" fontWeight="600" fill="#e88aa6">
+          {py}
+        </text>
       )}
-    </div>
+      <text
+        x="50"
+        y={showPinyin && py ? 78 : 68}
+        textAnchor="middle"
+        fontSize="48"
+        fill="#4f3d4a"
+        className="font-cn"
+      >
+        {it.ch}
+      </text>
+    </svg>
   )
 }
 
@@ -274,7 +324,6 @@ function PracticeCell({
     <div
       className={`han-cell grid place-items-center ${paper === 'line' ? 'han-line' : ''}`}
       style={{
-        containerType: 'size',
         borderColor: line.line,
         background: bg,
         opacity: fade ? 1 : undefined,
@@ -294,7 +343,7 @@ function StrokeCell({ it, paper, line, meta }: { it: CellItem | null; paper: Pap
   return (
     <div
       className={`han-cell grid min-h-0 place-items-center ${paper === 'line' ? 'han-line' : ''}`}
-      style={{ containerType: 'size', borderColor: line.line }}
+      style={{ borderColor: line.line }}
     >
       <Guide kind={paper === 'tian' ? 'tian' : paper === 'mi' ? 'mi' : null} color={line.guide} />
       {it && <CellInner it={it} showPinyin showStroke={it.v !== 'trace'} meta={meta} trace={it.v === 'trace'} />}
@@ -338,12 +387,20 @@ function Sheet({
   /* có ảnh nền → ô hơi trong suốt để hoạ tiết lộ ra */
   const solidCell = bgImg ? 'rgba(255,255,255,0.62)' : '#fff'
 
+  /* nền trang tối → chữ ngoài ô (đầu trang, chân trang, watermark) đổi màu sáng
+     để không bị “tối trên tối” biến mất khi in PDF */
+  const dark = pageBgTone(cfg) === 'dark'
+  const inkPage = dark ? '#fffdf6' : undefined /* undefined → giữ màu mặc định */
+  const inkSub = dark ? '#c9b3bf' : undefined
+  const inkMuted = dark ? '#cfa9ba' : undefined
+  const ruleColor = dark ? '#7a5f6d' : undefined
+
   const cellCommon = { paper, line, colorful, showPinyin, showStroke, meta: charMeta, solidCell }
 
   return (
     <div
       className="ink-exact relative flex h-full w-full flex-col text-[#4f3d4a]"
-      style={{ background: bgCssOf(cfg), containerType: 'inline-size' }}
+      style={{ background: bgCssOf(cfg), containerType: 'inline-size', color: inkPage }}
     >
       {/* hình nền tuỳ chỉnh (làm mờ để chữ vẫn rõ) */}
       {bgImg && (
@@ -360,8 +417,11 @@ function Sheet({
       {wmText && (
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 grid select-none place-items-center overflow-hidden">
           <span
-            className="wm-mark font-display font-bold"
-            style={{ fontSize: wmText.length > 14 ? '8cqw' : wmText.length > 8 ? '11cqw' : '15cqw' }}
+            className={`wm-mark font-display font-bold ${wmText.length > 14 ? 'wm-long' : wmText.length > 8 ? 'wm-mid' : 'wm-short'}`}
+            style={{
+              fontSize: wmText.length > 14 ? '8cqw' : wmText.length > 8 ? '11cqw' : '15cqw',
+              color: dark ? 'rgba(255,214,224,0.17)' : undefined,
+            }}
           >
             {wmText}
           </span>
@@ -370,11 +430,11 @@ function Sheet({
 
       {/* đầu trang vở */}
       {showHeader && (
-        <div className="relative flex items-end justify-between gap-3 border-b-2 border-dashed border-[#eac6d2] pb-2">
+        <div className="relative flex items-end justify-between gap-3 border-b-2 border-dashed border-[#eac6d2] pb-2" style={ruleColor ? { borderColor: ruleColor } : undefined}>
           <p className="font-display text-sm font-bold sm:text-base">
-            {title} <span className="font-cn" style={{ color: head.color }}>{head.cn}</span>
+            {title} <span className="font-cn" style={{ color: dark ? '#e8b4c4' : head.color }}>{head.cn}</span>
           </p>
-          <p className="text-[10px] font-semibold text-[#8d7484] sm:text-xs">
+          <p className="text-[10px] font-semibold text-[#8d7484] sm:text-xs" style={{ color: inkSub }}>
             Tên <span className="inline-block w-16 border-b border-[#c9a2b3] sm:w-24" /> · Ngày{' '}
             <span className="inline-block w-12 border-b border-[#c9a2b3] sm:w-16" />
           </p>
@@ -401,29 +461,31 @@ function Sheet({
         <div className="relative mt-1.5 flex min-h-0 flex-1 flex-col gap-[2cqw]">
           {strokeBlocks.map((b, bi) => (
             <div key={bi} className="flex min-h-0 flex-1 flex-col gap-[1.2cqw]">
-              <div className="flex items-center gap-[1.6cqw] border-b border-dashed border-[#eac6d2] pb-[0.5cqw]">
-                <span className="font-cn font-bold leading-none text-[#4f3d4a]" style={{ fontSize: '4.6cqw' }}>
+              <div className="flex items-center gap-[1.6cqw] border-b border-dashed border-[#eac6d2] pb-[0.5cqw]" style={ruleColor ? { borderColor: ruleColor } : undefined}>
+                <span className="fs-sw font-cn font-bold leading-none text-[#4f3d4a]" style={{ fontSize: '4.6cqw', color: inkPage }}>
                   {b.word}
                 </span>
                 {showPinyin && (
-                  <span className="font-semibold leading-none text-[#e88aa6]" style={{ fontSize: '3.3cqw' }}>
+                  <span className="fs-sp font-semibold leading-none text-[#e88aa6]" style={{ fontSize: '3.3cqw' }}>
                     {b.py}
                   </span>
                 )}
                 {showMeaning && b.vi && (
-                  <span className="min-w-0 truncate font-semibold leading-none text-[#8d7484]" style={{ fontSize: '3cqw' }}>
+                  <span className="fs-sv min-w-0 truncate font-semibold leading-none text-[#8d7484]" style={{ fontSize: '3cqw', color: inkSub }}>
                     {b.vi}
                   </span>
                 )}
                 {showStroke && (
-                  <span className="ml-auto flex shrink-0 items-center gap-[1cqw]">
+                  <span className="ml-auto flex shrink-0 items-center gap-1">
                     {[...b.word].slice(0, 4).map((c, ci) => (
-                      <StrokeChar key={`${c}-${ci}`} ch={c} size={7.4} />
+                      <span key={`${c}-${ci}`} className="block shrink-0" style={{ width: '4.6%', aspectRatio: '1' }}>
+                        <StrokeChar ch={c} />
+                      </span>
                     ))}
                   </span>
                 )}
                 <span
-                  className="shrink-0 rounded-full bg-[var(--pastel-pink-soft)] px-[1.8cqw] py-[0.6cqw] font-bold text-[#8a4a63]"
+                  className="fs-sc shrink-0 rounded-full bg-[var(--pastel-pink-soft)] px-[1.8cqw] py-[0.6cqw] font-bold text-[#8a4a63]"
                   style={{ fontSize: '2.5cqw' }}
                 >
                   笔顺
@@ -450,36 +512,38 @@ function Sheet({
               <div className="flex min-h-0 items-stretch gap-[2.4cqw]" style={{ flex: 1.25 }}>
                 <div
                   className={`han-cell grid shrink-0 place-items-center self-center ${paper === 'line' ? 'han-line' : ''}`}
-                  style={{ height: '92%', aspectRatio: '1', containerType: 'size', borderColor: line.line }}
+                  style={{ height: '92%', aspectRatio: '1', borderColor: line.line }}
                 >
                   <Guide kind={paper === 'tian' ? 'tian' : paper === 'mi' ? 'mi' : null} color={line.guide} />
                   {showStroke ? (
-                    <span className="relative grid place-items-center" style={{ width: '70cqw', aspectRatio: '1' }}>
-                      <StrokeChar ch={b.ch} size={70} />
+                    <span className="relative block" style={{ width: '70%', aspectRatio: '1' }}>
+                      <StrokeChar ch={b.ch} />
                     </span>
                   ) : (
-                    <span className="font-cn relative leading-none text-[#4f3d4a]" style={{ fontSize: '56cqw' }}>
-                      {b.ch}
-                    </span>
+                    <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                      <text x="50" y="72" textAnchor="middle" fontSize="56" fill="#4f3d4a" className="font-cn">
+                        {b.ch}
+                      </text>
+                    </svg>
                   )}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-[1.2cqw]">
                   {showPinyin && (
-                    <p className="truncate font-bold leading-none text-[#e88aa6]" style={{ fontSize: '4.4cqw' }}>
+                    <p className="fs-bp truncate font-bold leading-none text-[#e88aa6]" style={{ fontSize: '4.4cqw' }}>
                       {b.py}
                     </p>
                   )}
                   {showMeaning && (
-                    <p className="truncate font-semibold leading-none text-[#6f5a68]" style={{ fontSize: '3.6cqw' }}>
+                    <p className="fs-bm truncate font-semibold leading-none text-[#6f5a68]" style={{ fontSize: '3.6cqw', color: inkSub }}>
                       {b.vi || '—'}
                     </p>
                   )}
-                  <p className="truncate font-semibold leading-none text-[#b58fa0]" style={{ fontSize: '2.7cqw' }}>
+                  <p className="fs-bh truncate font-semibold leading-none text-[#b58fa0]" style={{ fontSize: '2.7cqw', color: inkMuted }}>
                     Tô theo chữ mẫu · 描红
                   </p>
                 </div>
                 {showStroke && (
-                  <div className="shrink-0 self-center" style={{ height: '78%', aspectRatio: '1', containerType: 'size' }}>
+                  <div className="shrink-0 self-center" style={{ height: '78%', aspectRatio: '1' }}>
                     <StrokeChar ch={b.ch} />
                   </div>
                 )}
@@ -489,12 +553,14 @@ function Sheet({
                   <div
                     key={ci}
                     className={`han-cell grid min-h-0 place-items-center ${paper === 'line' ? 'han-line' : ''}`}
-                    style={{ containerType: 'size', borderColor: line.line }}
+                    style={{ borderColor: line.line }}
                   >
                     <Guide kind={paper === 'tian' ? 'tian' : paper === 'mi' ? 'mi' : null} color={line.guide} />
-                    <span className="font-cn relative leading-none text-[#4f3d4a]" style={{ fontSize: '52cqw', opacity: 0.15 }}>
-                      {b.ch}
-                    </span>
+                    <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                      <text x="50" y="78" textAnchor="middle" fontSize="52" fill="#4f3d4a" opacity="0.15" className="font-cn">
+                        {b.ch}
+                      </text>
+                    </svg>
                   </div>
                 ))}
               </div>
@@ -517,14 +583,14 @@ function Sheet({
             {['#', '汉字 · Chữ Hán', 'Pinyin', showMeaning ? 'Nghĩa Việt' : 'Tự điền nghĩa'].map((h) => (
               <div
                 key={h}
-                className="grid place-items-center rounded-[2.5px] border border-[#ecc2cf] bg-[var(--pastel-pink-soft)] px-0.5 text-center font-bold text-[#8a4a63]"
+                className="fs-ih grid place-items-center rounded-[2.5px] border border-[#ecc2cf] bg-[var(--pastel-pink-soft)] px-0.5 text-center font-bold text-[#8a4a63]"
                 style={{ fontSize: '1.8cqw' }}
               >
                 {h}
               </div>
             ))}
             <div
-              className="grid place-items-center rounded-[2.5px] border border-[#ecc2cf] bg-[var(--pastel-pink-soft)] px-0.5 text-center font-bold text-[#8a4a63]"
+              className="fs-ih grid place-items-center rounded-[2.5px] border border-[#ecc2cf] bg-[var(--pastel-pink-soft)] px-0.5 text-center font-bold text-[#8a4a63]"
               style={{ fontSize: '1.8cqw', gridColumn: `span ${practiceCells}` }}
             >
               Luyện viết · 写
@@ -534,13 +600,13 @@ function Sheet({
             {infoRows.map((r, ri) => (
               <Fragment key={ri}>
                 <div
-                  className="grid place-items-center overflow-hidden rounded-[2.5px] border border-[#ecc2cf] bg-white font-bold text-[#b58fa0]"
+                  className="fs-in grid place-items-center overflow-hidden rounded-[2.5px] border border-[#ecc2cf] bg-white font-bold text-[#b58fa0]"
                   style={{ fontSize: '1.9cqw' }}
                 >
                   {r ? r.n : ''}
                 </div>
                 <div
-                  className={`han-cell grid place-items-center overflow-hidden rounded-[2.5px] bg-white`}
+                  className={`fs-ic han-cell grid place-items-center overflow-hidden rounded-[2.5px] bg-white`}
                   style={{ fontSize: '4.6cqw', borderColor: line.line }}
                 >
                   <span className="font-cn leading-tight" style={{ opacity: r ? 1 : 0 }}>
@@ -548,13 +614,13 @@ function Sheet({
                   </span>
                 </div>
                 <div
-                  className="grid place-items-center overflow-hidden rounded-[2.5px] border border-[#ecc2cf] bg-white px-0.5 text-center font-semibold text-[#e88aa6]"
+                  className="fs-ip grid place-items-center overflow-hidden rounded-[2.5px] border border-[#ecc2cf] bg-white px-0.5 text-center font-semibold text-[#e88aa6]"
                   style={{ fontSize: '2.1cqw' }}
                 >
                   {showPinyin ? r?.py : ''}
                 </div>
                 <div
-                  className="grid place-items-center overflow-hidden rounded-[2.5px] border border-[#ecc2cf] bg-white px-0.5 text-center font-semibold text-[#6f5a68]"
+                  className="fs-iv grid place-items-center overflow-hidden rounded-[2.5px] border border-[#ecc2cf] bg-white px-0.5 text-center font-semibold text-[#6f5a68]"
                   style={{ fontSize: '2cqw' }}
                 >
                   {showMeaning ? r?.vi || '' : ''}
@@ -570,7 +636,7 @@ function Sheet({
 
       {/* chân trang nhỏ */}
       {footerText.trim() && (
-        <p className="relative mt-1.5 text-right font-semibold text-[#b58fa0]" style={{ fontSize: '2.4cqw' }}>
+        <p className="fs-ft relative mt-1.5 text-right font-semibold text-[#b58fa0]" style={{ fontSize: '2.4cqw', color: inkMuted }}>
           {footerText}
         </p>
       )}
@@ -836,7 +902,7 @@ export default function CreateFile() {
   const charCount = useMemo(() => words.reduce((s, w) => s + [...w].filter(isHan).length, 0), [words])
 
   /* ---------- dựng trang theo bố cục ---------- */
-  const sheets = useMemo(() => buildSheets(words, cfg.repeat, cfg.cols, cfg.rows, cfg.modelCell, charMeta), [words, cfg, charMeta])
+  const sheets = useMemo(() => buildSheets(words, cfg.repeat, cfg.cols, cfg.rows, cfg.modelCell, charMeta, cfg.showPinyin), [words, cfg, charMeta])
   const radicalSheets = useMemo(() => buildRadicalSheets(radicals, cfg.practiceRows, cfg.cols, cfg.rows), [radicals, cfg])
   const flowPages = useMemo(() => buildFlowPages(para, cfg.cols, cfg.rows, charMeta), [para, cfg, charMeta])
   const infoPages = useMemo(() => chunkInfoPages(buildInfoRows(words, charMeta), Math.max(3, cfg.rows)), [words, charMeta, cfg])
@@ -1564,6 +1630,12 @@ export default function CreateFile() {
                         Miễn phí, không cần đăng nhập — trong hộp thoại in chọn <strong className="text-[#6f5a68]">“Save as PDF”</strong> và bật{' '}
                         <strong className="text-[#6f5a68]">“Background graphics”</strong> để giữ màu.
                       </p>
+
+                      {pageBgTone(cfg) === 'dark' && (
+                        <p className="rounded-xl bg-[var(--pastel-peach)]/40 px-3 py-2 text-[10.5px] font-bold leading-relaxed text-[#a05a3a] ring-1 ring-[#f3dcc6]">
+                          ⚠️ Bạn đang dùng nền màu tối — nhớ bật <strong>“Background graphics”</strong> khi in, nếu không đầu trang/chân trang sẽ rất khó đọc.
+                        </p>
+                      )}
 
                       <div className="grid grid-cols-2 gap-2">
                         <button

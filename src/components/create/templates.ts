@@ -444,3 +444,25 @@ export function bgCssOf(cfg: SheetCfg): string {
   if (cfg.bg === 'custom') return cfg.customColor || '#ffffff'
   return BACKDROPS.find((b) => b.id === cfg.bg)?.bg ?? '#ffffff'
 }
+
+/* Độ sáng tương đối (0 đen → 1 trắng) của màu hex */
+function hexLuminance(hex: string): number {
+  const m = hex.replace('#', '')
+  const full = m.length === 3 ? m.split('').map((c) => c + c).join('') : m
+  const r = parseInt(full.slice(0, 2), 16) / 255
+  const g = parseInt(full.slice(2, 4), 16) / 255
+  const b = parseInt(full.slice(4, 6), 16) / 255
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+/* Nền trang tối hay sáng → quyết định màu mực của chữ ngoài ô
+   (đầu trang, chân trang, watermark). Lấy màu phẳng CUỐI CÙNG
+   trong chuỗi nền (nền gradient luôn khai báo màu gốc ở cuối). */
+export function pageBgTone(cfg: SheetCfg): 'dark' | 'light' {
+  if (cfg.bg === 'custom') {
+    return hexLuminance(cfg.customColor || '#ffffff') < 0.46 ? 'dark' : 'light'
+  }
+  const hexes = bgCssOf(cfg).match(/#[0-9a-fA-F]{3,6}/g) ?? []
+  const base = hexes[hexes.length - 1] ?? '#ffffff'
+  return hexLuminance(base) < 0.46 ? 'dark' : 'light'
+}

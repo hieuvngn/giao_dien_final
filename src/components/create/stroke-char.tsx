@@ -35,10 +35,10 @@ const flip = (y: number) => 900 - y
 
 export default function StrokeChar({
   ch,
-  size, // % chiều rộng ô (cqw) — bỏ trống để lấp đầy phần tử cha
   numbered = true,
 }: {
   ch: string
+  /** (cũ) cỡ theo cqw — không còn dùng, StrokeChar luôn lấp đầy phần tử cha */
   size?: number
   numbered?: boolean
 }) {
@@ -57,18 +57,26 @@ export default function StrokeChar({
   /* dữ liệu đúng ký tự hiện tại (tránh sai lệch khi đổi ch trước khi tải xong) */
   const data = entry && entry.ch === ch ? entry.data : null
 
-  const boxStyle = size ? { width: `${size}cqw`, aspectRatio: '1' } : { width: '100%', height: '100%' }
+  /* luôn lấp đầy phần tử cha — cha quyết định kích thước (tránh đơn vị cqw
+     vốn có thể bị resolve = 0 khi in trên một số trình duyệt) */
+  const fill = { width: '100%', height: '100%' } as const
 
-  /* chưa tải / không có dữ liệu → chữ đỏ bình thường */
+  /* chưa tải / không có dữ liệu → chữ đỏ trong SVG (an toàn khi in) */
   if (!data) {
     return (
-      <span
-        className="font-cn grid place-items-center leading-none text-[#d2495f]"
-        style={{ ...boxStyle, fontSize: size ? `${size * 0.82}cqw` : 'inherit' }}
-        aria-label={ch}
-      >
-        {ch}
-      </span>
+      <svg viewBox="0 0 100 100" className="block" style={fill} role="img" aria-label={ch}>
+        <text
+          x="50"
+          y="79"
+          textAnchor="middle"
+          fontSize="86"
+          fontWeight="800"
+          fill="#d2495f"
+          style={{ fontFamily: 'var(--font-cn), serif' }}
+        >
+          {ch}
+        </text>
+      </svg>
     )
   }
 
@@ -77,7 +85,7 @@ export default function StrokeChar({
   const r = n > 12 ? 44 : n > 9 ? 52 : 58
   const fs = n > 12 ? 52 : n > 9 ? 62 : 74
   return (
-    <svg viewBox="-90 -90 1204 1204" className="block" style={boxStyle} role="img" aria-label={`Thứ tự nét của ${ch}`}>
+    <svg viewBox="-90 -90 1204 1204" className="block" style={fill} role="img" aria-label={`Thứ tự nét của ${ch}`}>
       <g transform="scale(1, -1) translate(0, -900)">
         {data.strokes.map((d, i) => (
           <path key={i} d={d} fill="#d2495f" opacity={0.9} />

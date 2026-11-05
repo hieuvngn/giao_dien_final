@@ -372,6 +372,33 @@
   margin: 0;
 }
 
+/* ============================================================
+   Dự phòng khi in cho đơn vị cqw (container query units):
+   một số trình duyệt (Safari/WebKit) resolve cqw = 0 trong luồng
+   in → chữ biến mất dù preview hiển thị bình thường. Bản in luôn
+   rộng 184mm ≈ 695px nên 1cqw của trang ≈ 6.95px — thay bằng px
+   cố định (giá trị khớp đúng kích thước Chromium tính được).
+   Chữ trong Ô đã dùng SVG nên không phụ thuộc cqw.
+   ============================================================ */
+@media print {
+  .print-only .fs-sw { font-size: 32px !important; }  /* 4.6cqw — từ ở khối thứ tự nét */
+  .print-only .fs-sp { font-size: 23px !important; }  /* 3.3cqw — pinyin khối */
+  .print-only .fs-sv { font-size: 21px !important; }  /* 3cqw — nghĩa khối */
+  .print-only .fs-sc { font-size: 17px !important; }  /* 2.5cqw — chip 笔顺 */
+  .print-only .fs-bp { font-size: 31px !important; }  /* 4.4cqw — pinyin ô chữ lớn */
+  .print-only .fs-bm { font-size: 25px !important; }  /* 3.6cqw — nghĩa ô chữ lớn */
+  .print-only .fs-bh { font-size: 19px !important; }  /* 2.7cqw — gợi ý ô chữ lớn */
+  .print-only .fs-ih { font-size: 12.5px !important; } /* 1.8cqw — tiêu đề bảng */
+  .print-only .fs-in { font-size: 13px !important; }  /* 1.9cqw — số thứ tự */
+  .print-only .fs-ic { font-size: 32px !important; }  /* 4.6cqw — chữ Hán bảng */
+  .print-only .fs-ip { font-size: 15px !important; }  /* 2.1cqw — pinyin bảng */
+  .print-only .fs-iv { font-size: 14px !important; }  /* 2cqw — nghĩa bảng */
+  .print-only .fs-ft { font-size: 17px !important; }  /* 2.4cqw — chân trang */
+  .print-only .wm-long { font-size: 56px !important; }   /* 8cqw — watermark dài */
+  .print-only .wm-mid { font-size: 77px !important; }    /* 11cqw — watermark vừa */
+  .print-only .wm-short { font-size: 104px !important; } /* 15cqw — watermark ngắn */
+}
+
 @media (prefers-reduced-motion: reduce) {
   .floaty,
   .floaty-slow,
